@@ -1,5 +1,6 @@
 package com.i550.photogallery;
 
+import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -9,6 +10,7 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -46,18 +48,25 @@ public class PhotoGalleryFragment extends Fragment{
         }       //проверяет текущее состояние модели, вызывается при любом ее изменении и при создании нового РесайклВью,
         // настраивает адаптер для РесайклВью
     }
+//_____________________________________________
 
     private class PhotoHolder extends RecyclerView.ViewHolder{  //viewHolder  - вывод на экран
-        private TextView mTitleTextView;
+        private ImageView mItemImageView;
 
-        public PhotoHolder(View itemView) {
+        public PhotoHolder(View itemView) {     //вместо Text отображает ImageView (из gallery_item)
             super(itemView);
-            this.mTitleTextView = (TextView)itemView;
+            mItemImageView = itemView.findViewById(R.id.item_image_view);
         }
-        public void bindGalleryItem(GalleryItem item){
-            mTitleTextView.setText(item.toString());
+        public void bindDrawable(Drawable drawable){
+        mItemImageView.setImageDrawable(drawable);      //грузит картинку в ImageView
         }
     }
+  /*      public void bindGalleryItem(GalleryItem item){
+            mTitleTextView.setText(item.toString());
+        }
+    }*/
+
+//_____________________________________________
 
     private class PhotoAdapter extends RecyclerView.Adapter<PhotoHolder>{   //адаптер, предоставляет необходимой ФотоХолдер на основании списка ГаллериИтем
         private List<GalleryItem> mGalleryItems;
@@ -67,16 +76,20 @@ public class PhotoGalleryFragment extends Fragment{
         }
 
         @Override
-        public PhotoHolder onCreateViewHolder(ViewGroup viewGroup, int viewType) {
+        public PhotoHolder onCreateViewHolder(ViewGroup viewGroup, int viewType) {/*
             TextView textView = new TextView(getActivity());
-            return new PhotoHolder(textView);
+            return new PhotoHolder(textView);*/
+            LayoutInflater inflater = LayoutInflater.from(getActivity());       //получаем LayoutInflater
+            View view = inflater.inflate(R.layout.gallery_item, viewGroup, false);  //вдуваем в вью, родитель - viewGroup
+            return new PhotoHolder(view);
         }
 
         @Override
         public void onBindViewHolder(PhotoHolder holder, int position) {
             GalleryItem galleryItem = mGalleryItems.get(position);  //получаем ГалериИтем по позиции
-            holder.bindGalleryItem(galleryItem);    //биндим
-
+           // holder.bindGalleryItem(galleryItem);    //биндим
+            Drawable placeholder = getResources().getDrawable((R.drawable.bill_up_close));
+            holder.bindDrawable(placeholder);
         }
 
         @Override
@@ -84,6 +97,8 @@ public class PhotoGalleryFragment extends Fragment{
             return mGalleryItems.size();
         }
     }
+
+//_____________________________________________
 
     private class FetchItemsTask extends AsyncTask<Void,Void,List<GalleryItem>>{ // создает фоновый поток и выполняет doInBackground
         // 1 параметр - тип входных параметров для execute() которые -> в DoInBkgnd
