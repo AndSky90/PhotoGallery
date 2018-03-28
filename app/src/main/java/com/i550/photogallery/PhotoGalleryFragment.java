@@ -7,11 +7,11 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +21,7 @@ public class PhotoGalleryFragment extends Fragment{
     private static final String TAG = "PhotoGalleryFragment";
     private RecyclerView mPhotoRecyclerView;
     private List<GalleryItem> mItems = new ArrayList<>();
+    private ThumbnailDownloader<PhotoHolder> mThumbnailDownloader;
 
     public static PhotoGalleryFragment newInstance() {
         return new PhotoGalleryFragment();
@@ -31,6 +32,10 @@ public class PhotoGalleryFragment extends Fragment{
         super.onCreate(savedInstanceState);
         setRetainInstance(true);    // - удерживаем фрагмент;
         new FetchItemsTask().execute();         //-запускаем асинх таск - получение данных...
+        mThumbnailDownloader = new ThumbnailDownloader<>();
+        mThumbnailDownloader.start();
+        mThumbnailDownloader.getLooper();
+        Log.i(TAG, "Bkgnd thread started");
     }
 
     @Nullable @Override
@@ -40,6 +45,13 @@ public class PhotoGalleryFragment extends Fragment{
         mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(),3));
         setupAdapter();
         return v; // всё что выше - подготовка вью - фрагмента (надо);
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        mThumbnailDownloader.quit();
+        Log.i(TAG, "Bkgnd thread destroyed");
     }
 
     private void setupAdapter() {
@@ -90,6 +102,7 @@ public class PhotoGalleryFragment extends Fragment{
            // holder.bindGalleryItem(galleryItem);    //биндим
             Drawable placeholder = getResources().getDrawable((R.drawable.bill_up_close));
             holder.bindDrawable(placeholder);
+            mThumbnailDownloader.queueThumbnail(holder, galleryItem.getmUrl());
         }
 
         @Override
