@@ -1,17 +1,24 @@
 package com.i550.photogallery;
 
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.support.v7.widget.SearchView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,9 +37,18 @@ public class PhotoGalleryFragment extends Fragment{
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setHasOptionsMenu(true);    // - включаем кнопки в шапке(меню)
         setRetainInstance(true);    // - удерживаем фрагмент;
-        new FetchItemsTask().execute();         //-запускаем асинх таск - получение данных...
-        mThumbnailDownloader = new ThumbnailDownloader<>();
+        updateItems();         //-запускаем асинх таск - получение данных...
+        Handler responseHandler = new Handler();
+        mThumbnailDownloader = new ThumbnailDownloader<>(responseHandler);      //Handler присоединяется к Looper-y текущего потока
+        mThumbnailDownloader.setThumbnailDownloadListener(new ThumbnailDownloader.ThumbnailDownloadListener<PhotoHolder>() {
+            @Override
+            public void onThumbnailDownloaded(PhotoHolder target, Bitmap thumbnail) {
+                Drawable drawable = new BitmapDrawable(getResources(),thumbnail);
+                target.bindDrawable(drawable);
+            }
+        });
         mThumbnailDownloader.start();
         mThumbnailDownloader.getLooper();
         Log.i(TAG, "Bkgnd thread started");
@@ -52,6 +68,59 @@ public class PhotoGalleryFragment extends Fragment{
         super.onDestroy();
         mThumbnailDownloader.quit();
         Log.i(TAG, "Bkgnd thread destroyed");
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {     //вдуваем меню))
+        super.onCreateOptionsMenu(menu, inflater);
+        inflater.inflate(R.menu.fragment_photo_gallery,menu);
+        MenuItem searchItem = menu.findItem(R.id.menu_item_search);     //находим сёрчИтем
+        final SearchView searchView = (SearchView) searchItem.getActionView();      //получаем у него SearchView
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String s) {
+                Log.d(TAG, "QueryTextSubmit: " + s);
+                updateItems();
+                QueryPreferences.setStoredQuery(getActivity(),s);   //сохраняем в SharedPreferences
+
+                return true;
+                }
+            @Override
+            public boolean onQueryTextChange(String s) {
+                Log.d(TAG, "QueryTextChange: " + s);
+                return false;
+            }
+        });
+        searchView.setOnSearchClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String query = QueryPreferences.getStoredQuery(getActivity());
+                searchView.setQuery(query,false);
+            }
+        });
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.menu_item_clear:
+                QueryPreferences.setStoredQuery(getActivity(), null);
+                updateItems();      // обновление вида RecyclerView для соответствия последнему запросу
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
+    private void updateItems(){
+        String query = QueryPreferences.getStoredQuery(getActivity());
+        new FetchItemsTask(query).execute();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        mThumbnailDownloader.clearQueue();
     }
 
     private void setupAdapter() {
@@ -117,19 +186,20 @@ public class PhotoGalleryFragment extends Fragment{
         // 1 параметр - тип входных параметров для execute() которые -> в DoInBkgnd
         // 2 параметр - тип для передачи инфы о ходе выполнения
         // 3 параметр - тип результата АсинхТаска (ретурн бэкграунда и входной параметр онПостЕхе)
+        private String mQuery;
+
+        public FetchItemsTask(String query){
+            mQuery=query;
+        }
 
         @Override
         protected List<GalleryItem> doInBackground(Void... voids) {
-            /*
-            try {
-                String result = new FlickrFetchr().getUrlString("https://www.bignerdranch.com");
-                Log.i(TAG, "Fetched contents of URL: " + result);       //запускаем получение данных (фция во FlickrFetchr)
-            } catch (IOException ioe){
-                Log.e(TAG, "Failed to fetch URL: ", ioe);               //и логгируем получилось или нет
+
+            if (mQuery==null){
+            return new FlickrFetchr().fetchRecentPhotos();
+        }else{
+                return new FlickrFetchr().searchPhotos(mQuery);
             }
-            return null;
-        }*/
-            return new FlickrFetchr().fetchItems();
         }
 
         @Override

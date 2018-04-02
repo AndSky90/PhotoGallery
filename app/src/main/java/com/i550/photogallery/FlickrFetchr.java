@@ -19,7 +19,18 @@ import java.util.List;
 
 public class FlickrFetchr {     //класс сетевых функций
     private static final String TAG = "FlickrFetchr";
+    private static final String FETCH_RECENT_METHOD = "flickr.photos.getRecent";
+    private static final String SEARCH_METHOD = "flickr.photos.search";
     private static final String API_KEY = "9a0554259914a86fb9e7eb014e4e5d52";
+    private static final Uri    ENDPOINT = Uri.parse("https://api.flickr.com/services/rest/")  //строим запрос
+                    .buildUpon()        //Uri.Builder
+                    .appendQueryParameter("api_key", API_KEY)
+                    .appendQueryParameter("format", "json")                     //json возвратить
+                    .appendQueryParameter("nojsoncallback", "1")                //убирает из ответа имя и скобки
+                    .appendQueryParameter("extras", "url_s")    // возвр URL для уменьшенной картинки
+                    .build();
+
+        //    .toString();
 
     public byte[] getUrlBytes(String urlSpec) throws IOException{   //получает дату по УРЛ и возвращает массив байтов
         URL url = new URL(urlSpec); //урл на основе полученной строки
@@ -48,19 +59,21 @@ public class FlickrFetchr {     //класс сетевых функций
         return new String(getUrlBytes(urlSpec));        //тупо приводит в стринг;
     }
 
+    public List<GalleryItem> fetchRecentPhotos(){
+        String url = buildUrl(FETCH_RECENT_METHOD,null);
+        return downloadGalleryItems(url);
+    }
 
-    public List<GalleryItem> fetchItems(){
+    public List<GalleryItem> searchPhotos(String query){
+        String url = buildUrl(SEARCH_METHOD, query);
+        return downloadGalleryItems(url);
+    }
+
+
+    private List<GalleryItem> downloadGalleryItems(String url){
         List<GalleryItem> galleryItems = new ArrayList<>();
 
         try {
-            String url = Uri.parse("https://api.flickr.com/services/rest/")  //строим ебучий запрос
-                    .buildUpon()        //Uri.Builder
-                    .appendQueryParameter("method", "flickr.photos.getRecent")
-                    .appendQueryParameter("api_key", API_KEY)
-                    .appendQueryParameter("format", "json")                     //json возвратить
-                    .appendQueryParameter("nojsoncallback", "1")                //убирает из ответа имя и скобки
-                    .appendQueryParameter("extras", "url_s")    // возвр URL для уменьшенной картинки
-                    .build().toString();
             String jsonString = getUrlString(url);
             Log.i(TAG, "Received JSON: " + jsonString);
             JSONObject jsonBody = new JSONObject(jsonString);   //json разбирается в объект с иерархией
@@ -72,6 +85,15 @@ public class FlickrFetchr {     //класс сетевых функций
         }
         return galleryItems;
     }
+
+    private String buildUrl(String method, String query){   //метод для построения URL запроса
+        Uri.Builder uriBuilder = ENDPOINT.buildUpon().appendQueryParameter("method",method);
+        if(method.equals(SEARCH_METHOD)) {
+            uriBuilder.appendQueryParameter("text", query);
+        }
+        return uriBuilder.build().toString();
+    }
+
 
     private void parseItems(List<GalleryItem> items, JSONObject jsonBody) throws IOException, JSONException {
         //метод для извлечения инфы каждой фотографии, помещаем ее в Gallery item и кладем в список
