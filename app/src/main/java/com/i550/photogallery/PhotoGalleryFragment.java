@@ -1,5 +1,6 @@
 package com.i550.photogallery;
 
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -20,6 +21,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.support.v7.widget.SearchView;
 
+import java.security.spec.PSSParameterSpec;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,6 +42,8 @@ public class PhotoGalleryFragment extends Fragment{
         setHasOptionsMenu(true);    // - включаем кнопки в шапке(меню)
         setRetainInstance(true);    // - удерживаем фрагмент;
         updateItems();         //-запускаем асинх таск - получение данных...
+        Intent i = PollService.newIntent(getActivity());            //запускаем службу интентом
+        getActivity().startService(i);                               //запускаем службу интентом
         Handler responseHandler = new Handler();
         mThumbnailDownloader = new ThumbnailDownloader<>(responseHandler);      //Handler присоединяется к Looper-y текущего потока
         mThumbnailDownloader.setThumbnailDownloadListener(new ThumbnailDownloader.ThumbnailDownloadListener<PhotoHolder>() {
@@ -80,9 +84,9 @@ public class PhotoGalleryFragment extends Fragment{
             @Override
             public boolean onQueryTextSubmit(String s) {
                 Log.d(TAG, "QueryTextSubmit: " + s);
-                updateItems();
                 QueryPreferences.setStoredQuery(getActivity(),s);   //сохраняем в SharedPreferences
-
+                updateItems();
+                searchView.clearFocus();
                 return true;
                 }
             @Override
@@ -98,6 +102,12 @@ public class PhotoGalleryFragment extends Fragment{
                 searchView.setQuery(query,false);
             }
         });
+        MenuItem toggleItem = menu.findItem(R.id.menu_item_toggle_polling);     //менять надпись на кнопке
+        if (PollService.isServiceAlarmOn(getActivity())) {
+            toggleItem.setTitle(R.string.stop_polling);
+        } else {
+            toggleItem.setTitle(R.string.start_polling);
+        }
     }
 
     @Override
@@ -106,6 +116,11 @@ public class PhotoGalleryFragment extends Fragment{
             case R.id.menu_item_clear:
                 QueryPreferences.setStoredQuery(getActivity(), null);
                 updateItems();      // обновление вида RecyclerView для соответствия последнему запросу
+                return true;
+            case R.id.menu_item_toggle_polling:
+                boolean shouldStartAlarm = !PollService.isServiceAlarmOn(getActivity());
+                PollService.setServiceAlarm(getActivity(),shouldStartAlarm);
+                getActivity().invalidateOptionsMenu();  // обновляем меню на панели интсрументов чтоб надпись обновилась
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
