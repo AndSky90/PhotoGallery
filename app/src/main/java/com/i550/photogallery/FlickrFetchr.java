@@ -109,6 +109,7 @@ public class FlickrFetchr {     //класс сетевых функций
                 continue;
             }
             item.setmUrl(photoJsonObject.getString("url_s")); //получаем url_s фотки и ложим в итем
+            item.setOwner(photoJsonObject.getString("owner"));  //получаем владельца из Jsonа и ложим в итем
             items.add(item);            //получившийся итем ложим в список
         }
     }

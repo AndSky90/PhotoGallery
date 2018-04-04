@@ -1,10 +1,17 @@
 package com.i550.photogallery;
 
 
+import android.net.Uri;
+
 public class GalleryItem {          //сюда расшифровывается инфа, пришедшая с фликера
     private String mCaption;
     private String mId;
     private String mUrl;
+    private String mOwner;
+
+    public String getOwner() {return mOwner;}
+
+    public void setOwner(String owner) {mOwner = owner;}
 
     public String getmCaption() {
         return mCaption;
@@ -33,5 +40,13 @@ public class GalleryItem {          //сюда расшифровывается 
     @Override
     public String toString() {
         return mCaption;
+    }
+
+    public Uri getPhotoPageUri(){       //так выглядит УРЛ страницы фотки
+        return Uri.parse("https://www.flickr.com/photos/")
+                .buildUpon()
+                .appendPath(mOwner)
+                .appendPath(mId)
+                .build();
     }
 }

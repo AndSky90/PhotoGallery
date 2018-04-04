@@ -143,21 +143,32 @@ public class PhotoGalleryFragment extends VisibleFragment{
     }
 //_____________________________________________
 
-    private class PhotoHolder extends RecyclerView.ViewHolder{  //viewHolder  - вывод на экран
+    private class PhotoHolder extends RecyclerView.ViewHolder implements View.OnClickListener{  //viewHolder  - вывод на экран
         private ImageView mItemImageView;
+        private GalleryItem mGalleryItem;
 
         public PhotoHolder(View itemView) {     //вместо Text отображает ImageView (из gallery_item)
             super(itemView);
             mItemImageView = itemView.findViewById(R.id.item_image_view);
+            itemView.setOnClickListener(this);
         }
+
         public void bindDrawable(Drawable drawable){
         mItemImageView.setImageDrawable(drawable);      //грузит картинку в ImageView
         }
-    }
-  /*      public void bindGalleryItem(GalleryItem item){
-            mTitleTextView.setText(item.toString());
+
+        public void bindGalleryItem(GalleryItem item){
+            mGalleryItem=item;
         }
-    }*/
+
+        @Override       //по клику стартуем активность - интентом просмотра указанного УРЛ
+        public void onClick(View v) { Intent i = new Intent(Intent.ACTION_VIEW, mGalleryItem.getPhotoPageUri());
+        startActivity(i);
+
+        }
+
+
+    }
 
 //_____________________________________________
 
@@ -180,7 +191,7 @@ public class PhotoGalleryFragment extends VisibleFragment{
         @Override
         public void onBindViewHolder(PhotoHolder holder, int position) {
             GalleryItem galleryItem = mGalleryItems.get(position);  //получаем ГалериИтем по позиции
-           // holder.bindGalleryItem(galleryItem);    //биндим
+            holder.bindGalleryItem(galleryItem);    //биндим
             Drawable placeholder = getResources().getDrawable((R.drawable.bill_up_close));
             holder.bindDrawable(placeholder);
             mThumbnailDownloader.queueThumbnail(holder, galleryItem.getmUrl());
