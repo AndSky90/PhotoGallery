@@ -1,5 +1,6 @@
 package com.i550.photogallery;
 
+import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.IntentService;
 import android.app.Notification;
@@ -19,6 +20,10 @@ import java.util.concurrent.TimeUnit;
 public class PollService extends IntentService {
     private static final String TAG = "PollService";
     private static final long POLL_INTERVAL_MS = TimeUnit.MINUTES.toMillis(1);  //1 minute
+    public static final String ACTION_SHOW_NOTIFICATION = "com.i550.photogallery.SHOW_NOTIFICATION";    //константа действия
+    public static final String PERM_PRIVATE = "com.i550.photogallery.PRIVATE";                          //константа моего разрешения
+    public static final String REQUEST_CODE = "REQUEST_CODE";
+    public static final String NOTIFICATION = "NOTIFICATION";
 
     public static Intent newIntent(Context context){
         return new Intent(context, PollService.class);
@@ -70,8 +75,12 @@ public class PollService extends IntentService {
                     .setContentIntent(pi)       //запуск при нажатии
                     .setAutoCancel(true)        //удаляется уведомление после клика по нему
                     .build();
-            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            notificationManager.notify(0,notification);
+       //     NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+       //    notificationManager.notify(0,notification);
+       //    sendBroadcast(new Intent(ACTION_SHOW_NOTIFICATION), PERM_PRIVATE);    //отправляем бродкаст интент по адресу в константе, c мной созданным разрешением на доступ
+
+            //вместо верхнего = создаем упорядоченный широковещательный интент
+            showBackgroundNotification(0,notification);
         }
         QueryPreferences.setLastResultId(this,resultId);
     }
@@ -88,12 +97,21 @@ public class PollService extends IntentService {
             alarmManager.cancel(pi);
             pi.cancel();
         }
+        QueryPreferences.setAlarmOn(context,isOn);  //запись настройки для хранения состояния сигнала
     }
 
     public static boolean isServiceAlarmOn(Context context){
         Intent i = PollService.newIntent(context);
         PendingIntent pi = PendingIntent.getService(context,0,i,PendingIntent.FLAG_NO_CREATE);
         return pi!=null;
+    }
+
+    private void showBackgroundNotification(int requestCode, Notification notification){
+        Intent i = new Intent(ACTION_SHOW_NOTIFICATION);
+        i.putExtra(REQUEST_CODE, requestCode);
+        i.putExtra(NOTIFICATION, notification);
+        sendOrderedBroadcast(i,PERM_PRIVATE,null,null, Activity.RESULT_OK, null,null);
+        //3й параметр - приемник результата - но наш сервис умирает, поэтому мы его не используем (4й-его выполнитель (Handler) )
     }
 
 }
