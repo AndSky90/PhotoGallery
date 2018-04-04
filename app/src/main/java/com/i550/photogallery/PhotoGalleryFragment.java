@@ -162,9 +162,10 @@ public class PhotoGalleryFragment extends VisibleFragment{
         }
 
         @Override       //по клику стартуем активность - интентом просмотра указанного УРЛ
-        public void onClick(View v) { Intent i = new Intent(Intent.ACTION_VIEW, mGalleryItem.getPhotoPageUri());
-        startActivity(i);
-
+        public void onClick(View v) {
+          //  Intent i = new Intent(Intent.ACTION_VIEW, mGalleryItem.getPhotoPageUri());
+            Intent i = PhotoPageActivity.newIntent(getActivity(),mGalleryItem.getPhotoPageUri());   //вместо интента запускаем новую активити
+            startActivity(i);
         }
 
 
